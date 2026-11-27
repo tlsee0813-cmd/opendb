@@ -5,6 +5,7 @@
 <section class="panel delete-panel" aria-labelledby="delete-title">
   <h1 id="delete-title">자료를 삭제할까요?</h1>
   <p><strong>{{ resource.title }}</strong> 항목을 삭제합니다. 삭제한 자료는 복구할 수 없습니다.</p>
+  {% if record_count %}<p>연결된 검토 기록 {{ record_count }}건도 함께 삭제됩니다.</p>{% endif %}
   <form method="post" class="actions form-actions">
     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
     <a class="button secondary" href="{{ url_for('detail', resource_id=resource.id, **parameters) }}">취소</a>

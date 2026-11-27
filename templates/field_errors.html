@@ -1,0 +1,5 @@
+{% macro field_error(key) %}
+  {% if key in errors %}<p id="{{ key }}-error" class="field-error">{{ errors[key] }}</p>{% endif %}
+{% endmacro %}
+
+{% macro invalid(key) %}{% if key in errors %} aria-invalid="true" aria-describedby="{{ key }}-error"{% endif %}{% endmacro %}

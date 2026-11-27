@@ -47,7 +47,7 @@ def apply_sql_file(db, filename):
 def init_db():
     db = connect()
     try:
-        if table_exists(db, "resource_types"):
+        if table_exists(db, "review_records"):
             return
         db.execute("BEGIN IMMEDIATE")
         if not table_exists(db, "resources"):
@@ -55,6 +55,8 @@ def init_db():
             apply_sql_file(db, "seed.sql")
         if not table_exists(db, "resource_types"):
             apply_sql_file(db, "migrations/002_resource_types.sql")
+        if not table_exists(db, "review_records"):
+            apply_sql_file(db, "migrations/003_review_records.sql")
         db.commit()
     except Exception:
         db.rollback()

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% from 'field_errors.html' import field_error, invalid with context %}
+{% block title %}검토 기록 추가 · OpenDB{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('detail', resource_id=resource.id, **parameters) }}">← {{ resource.title }}</a>
+<section class="panel review-form-panel" aria-labelledby="record-form-title">
+  <h1 id="record-form-title">검토 기록 추가</h1>
+  <p class="muted form-note">원문에서 확인한 내용과 프로젝트에 적용할 판단을 각각 입력하세요.</p>
+  {% if errors %}<p class="error-summary" role="alert">표시된 입력값을 확인해 주세요.</p>{% endif %}
+  <form method="post" class="entry-form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div>
+      <label for="kind">기록 종류</label>
+      <select name="kind" id="kind" required{{ invalid('kind') }}>
+        {% for value, label in record_types.items() %}
+          <option value="{{ value }}"{% if fields.kind == value %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {{ field_error('kind') }}
+    </div>
+    <div>
+      <label for="recorded_on">기록일</label>
+      <input type="date" id="recorded_on" name="recorded_on" value="{{ fields.recorded_on or '' }}" required{{ invalid('recorded_on') }}>
+      {{ field_error('recorded_on') }}
+    </div>
+    <div class="wide">
+      <label for="summary">확인한 내용 또는 질문</label>
+      <textarea id="summary" name="summary" rows="3" maxlength="600" required placeholder="원문에서 확인한 내용이나 앞으로 확인할 질문"{{ invalid('summary') }}>{{ fields.summary or '' }}</textarea>
+      {{ field_error('summary') }}
+    </div>
+    <div class="wide">
+      <label for="application">적용 판단</label>
+      <textarea id="application" name="application" rows="2" maxlength="500" placeholder="프로젝트에 적용할 방법이나 다음에 확인할 동작"{{ invalid('application') }}>{{ fields.application or '' }}</textarea>
+      {{ field_error('application') }}
+    </div>
+    <div>
+      <label for="source_url">원문 주소</label>
+      <input type="url" id="source_url" name="source_url" maxlength="500" value="{{ fields.source_url or '' }}" placeholder="https://"{{ invalid('source_url') }}>
+      <p class="help">근거를 기록할 때는 원문 주소를 입력해야 합니다.</p>
+      {{ field_error('source_url') }}
+    </div>
+    <div>
+      <label for="source_location">원문 위치</label>
+      <input id="source_location" name="source_location" maxlength="140" value="{{ fields.source_location or '' }}" placeholder="문서 절 제목, 페이지 또는 줄 번호"{{ invalid('source_location') }}>
+      {{ field_error('source_location') }}
+    </div>
+    <div class="wide actions form-actions">
+      <a class="button secondary" href="{{ url_for('detail', resource_id=resource.id, **parameters) }}">취소</a>
+      <button class="button primary" type="submit">기록 저장</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

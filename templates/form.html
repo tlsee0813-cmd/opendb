@@ -1,10 +1,7 @@
 {% extends 'base.html' %}
 {% set action = '자료 수정' if resource else '자료 추가' %}
 {% block title %}{{ action }} · OpenDB{% endblock %}
-{% macro field_error(key) %}
-  {% if key in errors %}<p id="{{ key }}-error" class="field-error">{{ errors[key] }}</p>{% endif %}
-{% endmacro %}
-{% macro invalid(key) %}{% if key in errors %} aria-invalid="true" aria-describedby="{{ key }}-error"{% endif %}{% endmacro %}
+{% from 'field_errors.html' import field_error, invalid with context %}
 {% block content %}
 <a class="back" href="{{ url_for('detail', resource_id=resource.id, **parameters) if resource else url_for('catalog', **parameters) }}">← {{ '자료 상세' if resource else '자료 목록' }}</a>
 <section class="panel" aria-labelledby="form-title">

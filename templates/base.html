@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#19291f">
+  <meta name="theme-color" content="#f7f7ef">
   <title>{% block title %}OpenDB{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">본문 바로가기</a>
   <header class="top">
     <div class="wrap top-inner">
       <a class="brand" href="{{ url_for('catalog') }}" aria-label="OpenDB 자료 카탈로그">
@@ -15,12 +16,13 @@
         OpenDB
       </a>
       <nav aria-label="주 메뉴">
-        <a class="nav-link{% if request.endpoint in ('catalog', 'detail') %} active{% endif %}" href="{{ url_for('catalog') }}">자료 목록</a>
+        <a class="nav-link{% if request.endpoint != 'review_board' %} active{% endif %}" href="{{ url_for('catalog') }}"{% if request.endpoint == 'catalog' %} aria-current="page"{% endif %}>자료 목록</a>
+        <a class="nav-link{% if request.endpoint == 'review_board' %} active{% endif %}" href="{{ url_for('review_board') }}"{% if request.endpoint == 'review_board' %} aria-current="page"{% endif %}>검토 보드</a>
         <a class="button primary small" href="{{ url_for('resource_form') }}"><span aria-hidden="true">＋</span> 자료 추가</a>
       </nav>
     </div>
   </header>
-  <main class="wrap main">
+  <main class="wrap main" id="main-content">
     {% for message in get_flashed_messages() %}
       <p class="flash" role="status">{{ message }}</p>
     {% endfor %}

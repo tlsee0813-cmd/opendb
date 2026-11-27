@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}검토 보드 · OpenDB{% endblock %}
+{% block content %}
+<section class="intro" aria-labelledby="board-title">
+  <div class="intro-copy">
+    <h1 id="board-title">검토 보드</h1>
+    <p>열린 질문을 이어서 확인하고, 최근에 남긴 근거와 제약을 살펴보세요.</p>
+  </div>
+  <dl class="stats">
+    <div><dt>등록 근거</dt><dd>{{ counts.evidence }}</dd></div>
+    <div><dt>적용 제약</dt><dd>{{ counts.limitations }}</dd></div>
+    <div><dt>미완료 질문</dt><dd>{{ counts.open_questions }}</dd></div>
+  </dl>
+</section>
+
+<div class="board-layout">
+  <section class="board-card board-queue" aria-labelledby="queue-title">
+    <div class="board-card-heading">
+      <h2 id="queue-title">확인할 점</h2>
+      <span class="muted">미완료 {{ counts.open_questions }}건</span>
+    </div>
+    {% if pending %}
+      <ul class="board-list">
+        {% for item in pending %}
+        <li>
+          <div class="board-list-meta"><span>{{ item.title }} · {{ item.category }}</span><time datetime="{{ item.recorded_on }}">{{ item.recorded_on }}</time></div>
+          <a href="{{ url_for('detail', resource_id=item.resource_id, _anchor='review-record-' ~ item.id) }}">{{ item.summary }} <span aria-hidden="true">↗</span></a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if last_page > 1 %}
+      <nav class="pagination" aria-label="확인할 점 페이지">
+        {% if page > 1 %}<a class="button secondary small" href="{{ url_for('review_board', page=page-1) }}">이전</a>
+        {% else %}<span class="button secondary small disabled">이전</span>{% endif %}
+        <span>{{ page }} / {{ last_page }}</span>
+        {% if page < last_page %}<a class="button secondary small" href="{{ url_for('review_board', page=page+1) }}">다음</a>
+        {% else %}<span class="button secondary small disabled">다음</span>{% endif %}
+      </nav>
+      {% endif %}
+    {% else %}
+      <div class="empty"><strong>미완료 질문이 없습니다.</strong><p>자료 상세에서 확인할 점을 추가할 수 있습니다.</p></div>
+    {% endif %}
+  </section>
+
+  <section class="board-card level-card" aria-labelledby="levels-title">
+    <div class="board-card-heading">
+      <h2 id="levels-title">검증 수준 분포</h2>
+      <span class="muted">자료 {{ total }}건</span>
+    </div>
+    <ul class="level-list">
+      {% for level in levels %}
+      <li>
+        <div><a href="{{ url_for('catalog', verification=level.id) }}">{{ level.name }}</a><span>{{ level.total }}건</span></div>
+        <progress class="level-{{ level.id }}" max="{{ total or 1 }}" value="{{ level.total }}" aria-label="{{ level.name }} {{ level.total }}건"></progress>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="board-card board-latest" aria-labelledby="latest-title">
+    <div class="board-card-heading"><h2 id="latest-title">최근 근거와 제약</h2></div>
+    {% if latest %}
+    <ul class="board-list latest-list">
+      {% for item in latest %}
+      <li>
+        <div class="board-list-meta">
+          <span><span class="badge review-{{ item.kind }}">{{ record_types[item.kind] }}</span> {{ item.title }}</span>
+          <time datetime="{{ item.recorded_on }}">{{ item.recorded_on }}</time>
+        </div>
+        <a href="{{ url_for('detail', resource_id=item.resource_id, _anchor='review-record-' ~ item.id) }}">{{ item.summary }} <span aria-hidden="true">↗</span></a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+      <div class="empty"><strong>등록된 근거와 제약이 없습니다.</strong><p>자료 상세에서 새 검토 기록을 추가할 수 있습니다.</p></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
