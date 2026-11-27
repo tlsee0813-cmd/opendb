@@ -12,8 +12,9 @@
 - 자료를 추가하거나 수정하고, 연결된 기록 수를 확인한 뒤 삭제합니다.
 - 자료별로 원문 근거·적용 제약·확인할 점을 남기고, 원문에서 확인한 내용과 프로젝트 적용 판단을 구분합니다.
 - 검토 보드에서 미완료 질문, 최근 근거·제약, 자료 전체의 검증 수준을 확인합니다. 질문은 완료하거나 다시 열 수 있습니다.
+- 주제 탐색에서 자동화, 협업, 검색과 문서, 서비스 운영, 품질과 검증, 시간·미디어·공간의 32개 주제를 둘러봅니다.
 - 활용 가이드에서 한글 검색, 출처 및 파일 내보내기, CRUD·배포 검증, 변경 이력 실습을 확인합니다.
-- 새 데이터베이스에 자료 28건과 공개 문서를 바탕으로 작성한 검토 기록 33건을 생성합니다.
+- 새 데이터베이스에 자료 124건과 공개 원문을 바탕으로 작성한 검토 기록 129건을 생성합니다.
 
 ## 로컬 실행
 
@@ -42,7 +43,7 @@ flask --app app run
 | `OPENDB_HOSTED` | `1` |
 | `GUNICORN_CMD_ARGS` | `--access-logfile -` |
 
-Gunicorn에서 미리 로드 옵션을 제외해 libSQL 원격 연결을 워커 프로세스에서 초기화합니다. 빈 DB에는 `db/schema.sql`과 `db/seed.sql`을 적용합니다. 이어서 `db/migrations/002_resource_types.sql`에서 활용 유형 테이블과 외래키를 추가하고 기본 자료에 유형을 배정합니다. `db/migrations/003_review_records.sql`에서 자료별 검토 기록과 예시를 추가합니다. `db/curated_catalog.json`은 문제별 학습 자료와 실습을 정의합니다. 갱신 시 기존 URL과 충돌하는 자료는 건너뛰며, 최근 수정순 인덱스를 같은 트랜잭션에서 추가합니다. 기존 DB에는 아직 적용하지 않은 변경만 실행합니다. `/healthz`가 HTTP 200과 `"database":"turso"`를 반환하면 앱이 Turso로 연결된 상태입니다. 두 DB 변수를 모두 생략해 Render에서 실행한 경우 SQLite 데이터는 인스턴스 교체 시 초기화될 수 있습니다.
+Gunicorn에서 미리 로드 옵션을 제외해 libSQL 원격 연결을 워커 프로세스에서 초기화합니다. 빈 DB에는 `db/schema.sql`과 `db/seed.sql`을 적용합니다. 이어서 `db/migrations/002_resource_types.sql`에서 활용 유형 테이블과 외래키를 추가하고 기본 자료에 유형을 배정합니다. `db/migrations/003_review_records.sql`에서 자료별 검토 기록과 예시를 추가합니다. `db/curated_catalog.json`은 문제별 학습 자료와 실습을 정의합니다. `db/topic_catalog.json`은 기존 과제 가이드와 별개로 32개 주제의 공개 원문 96건과 기록을 정의합니다. 갱신 시 이미 있는 URL을 건너뛰고, 주제별 최신 목록에 사용하는 인덱스를 같은 트랜잭션에서 추가합니다. 기존 DB에는 아직 적용하지 않은 변경만 실행합니다. `/healthz`가 HTTP 200과 `"database":"turso"`를 반환하면 앱이 Turso로 연결된 상태입니다. 두 DB 변수를 모두 생략해 Render에서 실행한 경우 SQLite 데이터는 인스턴스 교체 시 초기화될 수 있습니다.
 
 ## 데이터베이스 설계
 
@@ -98,7 +99,7 @@ erDiagram
 
 [AgentFlow Open의 데이터 모델 검토안](https://github.com/laadkke-arch/agentflow-open/blob/work/data-model/docs/product/DATA_MODEL_DRAFT.md)에서 자료와 검증 가능한 주장을 연결하는 구조를, [조사 프로토콜](https://github.com/laadkke-arch/agentflow-open/blob/work/data-model/docs/product/RESEARCH_PROTOCOL.md)에서 원문 위치와 확인 단계 기록 방식을 참고했습니다. OpenDB는 자료별로 여러 검토 기록을 두고, 기록에 확인한 내용·적용 판단·원문 주소와 위치를 입력하도록 적용했습니다.
 
-한글 검색·파일 교환·검증·스키마 관리 자료는 관련 후보를 추린 뒤 공개 표준, 공식 매뉴얼, 공개 프로젝트 README를 다시 확인해 메모와 검토 기록을 작성했습니다. 새 자료에는 문서 확인 수준을 적용했습니다.
+한글 검색·파일 교환·검증·스키마 관리 자료는 관련 후보를 추린 뒤 공개 표준, 공식 매뉴얼, 공개 프로젝트 README를 다시 확인해 메모와 검토 기록을 작성했습니다. 새 자료에는 문서 확인 수준을 적용했습니다. 주제 탐색용 자료도 공식 표준·문서·공개 README를 다시 확인해 요약과 적용 판단을 작성했습니다.
 
 ## Codex 활용과 검증
 

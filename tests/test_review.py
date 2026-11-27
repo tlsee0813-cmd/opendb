@@ -38,12 +38,17 @@ class ReviewTests(unittest.TestCase):
 
         client = self.create_client()
         self.assertIn("SQLite FTS5 전문 검색", client.get("/guide").text)
+        self.assertIn("32개 주제", client.get("/topics").text)
+        self.assertIn("자료 96건", client.get("/topics").text)
+        topic_rows = client.get("/resources.csv", query_string={"q": "지도와 공간 데이터"})
+        titles = [row["자료명"] for row in csv.DictReader(io.StringIO(topic_rows.data.decode("utf-8-sig")))]
+        self.assertCountEqual(titles, ["GTFS Schedule 대중교통 명세", "pyproj 좌표 변환", "OGC STAC 공간 데이터 카탈로그"])
         self.create_client()
         with sqlite3.connect(self.path) as db:
             after = db.execute("SELECT * FROM resources ORDER BY id").fetchall()
             self.assertEqual(after[:len(before)], before)
-            self.assertEqual(len(after) - len(before), 15)
-            self.assertEqual(db.execute("SELECT COUNT(*) FROM review_records").fetchone(), (31,))
+            self.assertEqual(len(after) - len(before), 111)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM review_records").fetchone(), (127,))
             self.assertEqual(db.execute("PRAGMA foreign_key_check").fetchall(), [])
             db.execute("PRAGMA foreign_keys = ON")
             db.execute("DELETE FROM resources WHERE title = 'SQLite FTS5 전문 검색'")

@@ -24,8 +24,12 @@
       <label for="category_id">분류</label>
       <select id="category_id" name="category_id" required{{ invalid('category_id') }}>
         <option value="">분류를 선택하세요</option>
-        {% for item in categories %}
-          <option value="{{ item.id }}"{% if item.id|string == fields.category_id|string %} selected{% endif %}>{{ item.name }}</option>
+        {% for group in category_groups %}
+          <optgroup label="{{ group.title }}">
+          {% for item in group["items"] %}
+            <option value="{{ item.id }}"{% if item.id|string == fields.category_id|string %} selected{% endif %}>{{ item.name }}</option>
+          {% endfor %}
+          </optgroup>
         {% endfor %}
       </select>
       {{ field_error('category_id') }}

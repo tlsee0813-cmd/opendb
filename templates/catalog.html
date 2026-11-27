@@ -4,7 +4,8 @@
 <section class="intro" aria-labelledby="catalog-title">
   <div class="intro-copy">
     <h1 id="catalog-title">오픈소스 자료 카탈로그</h1>
-    <p>프로젝트에 맞는 도구를 찾고, 원문 근거와 적용 제약을 기록하세요.</p>
+    <p>자동화, 검색, 문서 처리, 서비스 운영 등 관심 주제의 공개 자료를 찾아보세요.</p>
+    <a class="intro-link" href="{{ url_for('topics') }}">주제별 자료 보기 <span aria-hidden="true">→</span></a>
   </div>
   <dl class="stats">
     <div><dt>등록 자료</dt><dd>{{ stats.total }}</dd></div>
@@ -17,14 +18,18 @@
   <form method="get" action="{{ url_for('catalog') }}" class="filters">
     <div class="filter-keyword">
       <label for="q">검색어</label>
-      <input id="q" name="q" type="search" placeholder="자료명, URL, 메모·검토 기록" maxlength="100" value="{{ parameters.q or '' }}">
+      <input id="q" name="q" type="search" placeholder="자료명, 주제, 메모·검토 기록" maxlength="100" value="{{ parameters.q or '' }}">
     </div>
     <div>
       <label for="category">분류</label>
       <select id="category" name="category">
         <option value="">전체 분류</option>
-        {% for item in categories %}
-          <option value="{{ item.id }}"{% if item.id == parameters.category %} selected{% endif %}>{{ item.name }}</option>
+        {% for group in category_groups %}
+          <optgroup label="{{ group.title }}">
+          {% for item in group["items"] %}
+            <option value="{{ item.id }}"{% if item.id == parameters.category %} selected{% endif %}>{{ item.name }}</option>
+          {% endfor %}
+          </optgroup>
         {% endfor %}
       </select>
     </div>

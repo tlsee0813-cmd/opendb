@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}주제 탐색 · OpenDB{% endblock %}
+{% block content %}
+<section class="guide-intro" aria-labelledby="topics-title">
+  <h1 id="topics-title">주제 탐색</h1>
+  <p>관심 주제를 선택하면 원문과 검토 기록을 확인할 수 있습니다.</p>
+  <p class="topic-metrics"><strong>{{ topic_count }}개 주제</strong><span aria-hidden="true">·</span> 자료 {{ resource_count }}건</p>
+</section>
+<nav class="topic-nav" aria-label="분야 바로가기">
+  {% for group in groups %}
+  <a href="#topic-group-{{ loop.index }}">{{ group.title }}</a>
+  {% endfor %}
+</nav>
+<div class="topic-grid">
+  {% for group in groups %}
+  <section class="board-card topic-card" id="topic-group-{{ loop.index }}" aria-labelledby="topic-heading-{{ loop.index }}">
+    <h2 id="topic-heading-{{ loop.index }}">{{ group.title }}</h2>
+    <p>{{ group.description }}</p>
+    <ul class="topic-items">
+      {% for topic in group.topics %}
+      <li>
+        <a href="{{ url_for('catalog', category=topic.id) }}">
+          <span><strong>{{ topic.name }}</strong><span class="topic-description">{{ topic.description }}</span></span>
+          <span class="topic-total">{{ topic.total }}건 <span aria-hidden="true">→</span></span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -7,7 +7,9 @@ from flask import current_app, g
 
 SQL_DIR = Path(__file__).with_name("db")
 CURATED_CATALOG = json.loads((SQL_DIR / "curated_catalog.json").read_text(encoding="utf-8"))
+TOPIC_CATALOG = json.loads((SQL_DIR / "topic_catalog.json").read_text(encoding="utf-8"))
 CURATED_INDEX = "resources_by_updated"
+TOPIC_INDEX = "resources_by_category_updated"
 
 
 def connect():
@@ -47,37 +49,57 @@ def apply_sql_file(db, filename):
             db.execute(statement)
 
 
+def insert_rows(db, statement, rows, suffix=""):
+    placeholders = "(" + ",".join("?" for _ in rows[0]) + ")"
+    values = ",".join(placeholders for _ in rows)
+    return db.execute(statement + " VALUES " + values + suffix,
+                      [value for row in rows for value in row])
+
+
+def import_readings(db, entries, checked_on):
+    rows = [
+        (item["title"], item["url"], item["description"], category_id, item["usage"], 2, checked_on)
+        for item, category_id in entries
+    ]
+    inserted = dict(insert_rows(
+        db, "INSERT INTO resources (title, url, description, category_id, usage_type_id, verification_id, checked_on)",
+        rows, " ON CONFLICT(url) DO NOTHING RETURNING url, id",
+    ).fetchall() or [])
+    notes = []
+    for item, _ in entries:
+        resource_id = inserted.get(item["url"])
+        if resource_id is None:
+            continue
+        for kind in ("evidence", "limitation", "question"):
+            if kind in item:
+                notes.append((resource_id, kind, item[kind], item["application"] if kind == "evidence" else None,
+                              item["url"] if kind != "question" else None,
+                              item.get("location") if kind != "question" else None, checked_on))
+    if notes:
+        insert_rows(db, "INSERT INTO review_records (resource_id, kind, summary, application, source_url, "
+                        "source_location, recorded_on)", notes)
+
+
 def import_curated_catalog(db):
-    checked_on = CURATED_CATALOG["checked_on"]
-    for guide in CURATED_CATALOG["guides"]:
-        for resource in guide["resources"]:
-            inserted = db.execute(
-                "INSERT INTO resources (title, url, description, category_id, usage_type_id, "
-                "verification_id, checked_on) VALUES (?, ?, ?, ?, ?, 2, ?) "
-                "ON CONFLICT(url) DO NOTHING RETURNING id",
-                (resource["title"], resource["url"], resource["description"], resource["category"],
-                 resource["usage"], checked_on),
-            ).fetchall()
-            if not inserted:
-                continue
-            resource_id = inserted[0][0]
-            for kind in ("evidence", "limitation", "question"):
-                if kind not in resource:
-                    continue
-                db.execute(
-                    "INSERT INTO review_records (resource_id, kind, summary, application, source_url, "
-                    "source_location, recorded_on) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (resource_id, kind, resource[kind], resource["application"] if kind == "evidence" else None,
-                     resource["url"] if kind != "question" else None,
-                     resource["location"] if kind != "question" else None, checked_on),
-                )
+    entries = [(item, item["category"]) for guide in CURATED_CATALOG["guides"] for item in guide["resources"]]
+    import_readings(db, entries, CURATED_CATALOG["checked_on"])
     db.execute("CREATE INDEX resources_by_updated ON resources(updated_at DESC, id DESC)")
+
+
+def import_topic_catalog(db):
+    topics = [topic for group in TOPIC_CATALOG["groups"] for topic in group["topics"]]
+    insert_rows(db, "INSERT INTO categories (name)", [(topic["name"],) for topic in topics],
+                " ON CONFLICT(name) DO NOTHING")
+    category_ids = dict(db.execute("SELECT name, id FROM categories").fetchall())
+    entries = [(item, category_ids[topic["name"]]) for topic in topics for item in topic["resources"]]
+    import_readings(db, entries, TOPIC_CATALOG["checked_on"])
+    db.execute("CREATE INDEX resources_by_category_updated ON resources(category_id, updated_at DESC, id DESC)")
 
 
 def init_db():
     db = connect()
     try:
-        if schema_has(db, CURATED_INDEX, "index"):
+        if schema_has(db, TOPIC_INDEX, "index"):
             return
         db.execute("BEGIN IMMEDIATE")
         if not schema_has(db, "resources"):
@@ -90,6 +112,8 @@ def init_db():
         # Create the listing index only after the catalog is imported in the same transaction.
         if not schema_has(db, CURATED_INDEX, "index"):
             import_curated_catalog(db)
+        if not schema_has(db, TOPIC_INDEX, "index"):
+            import_topic_catalog(db)
         db.commit()
     except Exception:
         db.rollback()

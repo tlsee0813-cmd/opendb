@@ -13,7 +13,7 @@ from flask import (
     Flask, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for,
 )
 
-from database import CURATED_CATALOG, close_db, fetch_all, init_db, write
+from database import CURATED_CATALOG, TOPIC_CATALOG, close_db, fetch_all, init_db, write
 
 PAGE_SIZE = 10
 REVIEW_PAGE_SIZE = 8
@@ -41,9 +41,23 @@ JOIN categories AS c ON c.id = r.category_id
 """
 
 
+def category_options(categories):
+    by_name = {item["name"]: item for item in categories}
+    groups = []
+    for group in TOPIC_CATALOG["groups"]:
+        items = [by_name.pop(topic["name"]) for topic in group["topics"] if topic["name"] in by_name]
+        if items:
+            groups.append({"title": group["title"], "items": items})
+    if by_name:
+        groups.insert(0, {"title": "기본 분류", "items": list(by_name.values())})
+    return groups
+
+
 def options():
+    categories = fetch_all("SELECT id, name FROM categories ORDER BY id")
     return {
-        "categories": fetch_all("SELECT id, name FROM categories ORDER BY id"),
+        "categories": categories,
+        "category_groups": category_options(categories),
         "levels": fetch_all("SELECT id, name FROM verification_levels ORDER BY id"),
         "types": fetch_all("SELECT id, name FROM resource_types ORDER BY id"),
     }
@@ -69,11 +83,13 @@ def catalog_where(parameters):
         conditions.append(
             "(instr(lower(r.title), lower(?)) > 0 OR instr(lower(r.description), lower(?)) > 0 "
             "OR instr(lower(r.url), lower(?)) > 0 OR EXISTS ("
+            "SELECT 1 FROM categories AS category WHERE category.id = r.category_id "
+            "AND instr(lower(category.name), lower(?)) > 0) OR EXISTS ("
             "SELECT 1 FROM review_records AS rr WHERE rr.resource_id = r.id "
             "AND (instr(lower(rr.summary), lower(?)) > 0 "
             "OR instr(lower(rr.application), lower(?)) > 0)))"
         )
-        args.extend([parameters["q"]] * 5)
+        args.extend([parameters["q"]] * 6)
     for name, column in (("category", "r.category_id"), ("verification", "r.verification_id"),
                          ("usage", "r.usage_type_id")):
         value = parameters[name]
@@ -316,6 +332,21 @@ def create_app(test_config=None):
         linked = fetch_all(f"SELECT id, url FROM resources WHERE url IN ({placeholders})", urls)
         resource_ids = {row["url"]: row["id"] for row in linked}
         return render_template("guide.html", guides=guides, resource_ids=resource_ids)
+
+    @app.get("/topics")
+    def topics():
+        counts = fetch_all(
+            "SELECT c.id, c.name, COUNT(r.id) AS total FROM categories AS c "
+            "LEFT JOIN resources AS r ON r.category_id = c.id GROUP BY c.id, c.name"
+        )
+        by_name = {entry["name"]: entry for entry in counts}
+        groups = []
+        for group in TOPIC_CATALOG["groups"]:
+            topics = [{**topic, **by_name[topic["name"]]} for topic in group["topics"]]
+            groups.append({"title": group["title"], "description": group["description"], "topics": topics})
+        listed_topics = [topic for group in groups for topic in group["topics"]]
+        return render_template("topics.html", groups=groups, topic_count=len(listed_topics),
+                               resource_count=sum(topic["total"] for topic in listed_topics))
 
     @app.route("/resources/<int:resource_id>/review/new", methods=["GET", "POST"])
     def review_form(resource_id):
