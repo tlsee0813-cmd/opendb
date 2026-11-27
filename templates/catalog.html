@@ -9,7 +9,7 @@
   <dl class="stats">
     <div><dt>등록 자료</dt><dd>{{ stats.total }}</dd></div>
     <div><dt>사용 분류</dt><dd>{{ stats.categories }}</dd></div>
-    <div><dt>검증 완료</dt><dd>{{ stats.verified }}</dd></div>
+    <div><dt>검증 기록</dt><dd>{{ stats.verified }}</dd></div>
   </dl>
 </section>
 
@@ -17,15 +17,25 @@
   <form method="get" action="{{ url_for('catalog') }}" class="filters">
     <div class="filter-keyword">
       <label for="q">검색어</label>
-      <input id="q" name="q" type="search" placeholder="자료명, URL, 활용 메모" maxlength="100" value="{{ query }}">
+      <input id="q" name="q" type="search" placeholder="자료명, URL, 활용 메모" maxlength="100" value="{{ parameters.q or '' }}">
     </div>
     <div>
       <label for="category">분류</label>
       <select id="category" name="category">
         <option value="">전체 분류</option>
         {% for item in categories %}
-          <option value="{{ item.id }}"{% if item.id == category_id %} selected{% endif %}>{{ item.name }}</option>
+          <option value="{{ item.id }}"{% if item.id == parameters.category %} selected{% endif %}>{{ item.name }}</option>
         {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="usage">활용 유형</label>
+      <select id="usage" name="usage">
+        <option value="">전체 유형</option>
+        {% for item in types %}
+          <option value="{{ item.id }}"{% if item.id == parameters.usage %} selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+        <option value="0"{% if parameters.usage == 0 %} selected{% endif %}>미지정</option>
       </select>
     </div>
     <div>
@@ -33,36 +43,53 @@
       <select id="verification" name="verification">
         <option value="">전체 수준</option>
         {% for item in levels %}
-          <option value="{{ item.id }}"{% if item.id == verification_id %} selected{% endif %}>{{ item.name }}</option>
+          <option value="{{ item.id }}"{% if item.id == parameters.verification %} selected{% endif %}>{{ item.name }}</option>
         {% endfor %}
       </select>
     </div>
-    <button class="button primary" type="submit">검색</button>
-    {% if query or category_id is not none or verification_id is not none %}
-      <a class="button secondary" href="{{ url_for('catalog') }}">초기화</a>
-    {% endif %}
+    <div>
+      <label for="sort">정렬</label>
+      <select id="sort" name="sort">
+        {% for key, order in orders.items() %}
+          <option value="{{ key }}"{% if key == sort %} selected{% endif %}>{{ order[0] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="button primary search-submit" type="submit">검색</button>
   </form>
   <div class="results">
     <div class="section-title">
-      <h2 id="result-title">자료 목록</h2>
-      <span class="muted">검색 결과 {{ total }}건</span>
+      <div class="title-group">
+        <h2 id="result-title">자료 목록</h2>
+        <span class="muted result-count">검색 결과 {{ total }}건</span>
+      </div>
+      <div class="result-actions">
+        {% if parameters.q or parameters.category is not none or parameters.usage is not none or parameters.verification is not none or parameters.sort %}
+          <a class="button secondary small" href="{{ url_for('catalog') }}">초기화</a>
+        {% endif %}
+        {% if rows %}
+          <a class="button secondary small" href="{{ url_for('export_catalog', **parameters) }}">CSV 다운로드</a>
+        {% endif %}
+      </div>
     </div>
     {% if rows %}
       <div class="records">
         <div class="record header-row" aria-hidden="true">
-          <span>자료명</span><span>분류</span><span>검증 수준</span><span>확인일</span><span></span>
+          <span>자료명</span><span>분류</span><span>활용 유형</span><span>검증 수준</span><span>확인일</span><span></span>
         </div>
         <ul class="record-list">
           {% for row in rows %}
+            {% set detail_link = url_for('detail', resource_id=row.id, **return_parameters) %}
             <li class="record">
               <div class="record-name">
-                <a href="{{ url_for('detail', resource_id=row.id) }}">{{ row.title }}</a>
+                <a href="{{ detail_link }}">{{ row.title }}</a>
                 {% if row.description %}<span>{{ row.description }}</span>{% endif %}
               </div>
               <span class="record-category">{{ row.category }}</span>
-              <span><span class="badge status-{{ row.verification_id }}">{{ row.verification }}</span></span>
+              <span class="record-usage">{{ row.usage_type }}</span>
+              <span class="record-status"><span class="badge status-{{ row.verification_id }}">{{ row.verification }}</span></span>
               <span class="record-date">{{ row.checked_on or '—' }}</span>
-              <a class="row-action" href="{{ url_for('detail', resource_id=row.id) }}" aria-label="{{ row.title }} 상세 보기">상세 <span aria-hidden="true">↗</span></a>
+              <a class="row-action" href="{{ detail_link }}" aria-label="{{ row.title }} 상세 보기">상세 <span aria-hidden="true">↗</span></a>
             </li>
           {% endfor %}
         </ul>
@@ -73,11 +100,11 @@
     {% if last_page > 1 %}
       <nav class="pagination" aria-label="자료 목록 페이지">
         {% if page > 1 %}
-          <a class="button secondary small" href="{{ url_for('catalog', q=query, category=category_id, verification=verification_id, page=page-1) }}">이전</a>
+          <a class="button secondary small" href="{{ url_for('catalog', page=page-1, **parameters) }}">이전</a>
         {% else %}<span class="button secondary small disabled">이전</span>{% endif %}
         <span>{{ page }} / {{ last_page }}</span>
         {% if page < last_page %}
-          <a class="button secondary small" href="{{ url_for('catalog', q=query, category=category_id, verification=verification_id, page=page+1) }}">다음</a>
+          <a class="button secondary small" href="{{ url_for('catalog', page=page+1, **parameters) }}">다음</a>
         {% else %}<span class="button secondary small disabled">다음</span>{% endif %}
       </nav>
     {% endif %}

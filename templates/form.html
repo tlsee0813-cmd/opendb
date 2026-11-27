@@ -6,7 +6,7 @@
 {% endmacro %}
 {% macro invalid(key) %}{% if key in errors %} aria-invalid="true" aria-describedby="{{ key }}-error"{% endif %}{% endmacro %}
 {% block content %}
-<a class="back" href="{{ url_for('detail', resource_id=resource.id) if resource else url_for('catalog') }}">← {{ '자료 상세' if resource else '자료 목록' }}</a>
+<a class="back" href="{{ url_for('detail', resource_id=resource.id, **parameters) if resource else url_for('catalog', **parameters) }}">← {{ '자료 상세' if resource else '자료 목록' }}</a>
 <section class="panel" aria-labelledby="form-title">
   <h1 id="form-title">{{ action }}</h1>
   <p class="muted form-note">자료명, 출처 URL, 분류, 검증 수준은 필수 항목입니다.</p>
@@ -34,6 +34,16 @@
       {{ field_error('category_id') }}
     </div>
     <div>
+      <label for="usage_type_id">활용 유형</label>
+      <select id="usage_type_id" name="usage_type_id"{{ invalid('usage_type_id') }}>
+        <option value="">미지정</option>
+        {% for item in types %}
+          <option value="{{ item.id }}"{% if item.id|string == fields.usage_type_id|string %} selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+      {{ field_error('usage_type_id') }}
+    </div>
+    <div>
       <label for="verification_id">검증 수준</label>
       <select id="verification_id" name="verification_id" required{{ invalid('verification_id') }}>
         {% for item in levels %}
@@ -42,7 +52,7 @@
       </select>
       {{ field_error('verification_id') }}
     </div>
-    <div class="wide">
+    <div>
       <label for="checked_on">확인일</label>
       <input type="date" class="date-input" id="checked_on" name="checked_on" value="{{ fields.checked_on or '' }}"{{ invalid('checked_on') }}>
       <p class="help">검증 수준이 문서 확인 또는 실행 확인이면 날짜를 입력해 주세요.</p>
@@ -54,7 +64,7 @@
       {{ field_error('description') }}
     </div>
     <div class="wide actions form-actions">
-      <a class="button secondary" href="{{ url_for('detail', resource_id=resource.id) if resource else url_for('catalog') }}">취소</a>
+      <a class="button secondary" href="{{ url_for('detail', resource_id=resource.id, **parameters) if resource else url_for('catalog', **parameters) }}">취소</a>
       <button class="button primary" type="submit">{{ '변경 저장' if resource else '자료 등록' }}</button>
     </div>
   </form>

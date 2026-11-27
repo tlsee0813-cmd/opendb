@@ -6,10 +6,11 @@
 
 ## 기능
 
-- 자료명·출처 URL·활용 메모로 검색하고, 분류와 검증 수준으로 결과를 좁힙니다.
-- 상세 화면에서 출처와 확인일을 확인합니다.
+- 자료명·출처 URL·활용 메모로 검색하고, 분류·활용 유형·검증 수준을 조합해 결과를 좁힙니다.
+- 최근 수정순·자료명순·최근 확인순으로 정렬하고, 현재 검색 결과 전체를 CSV로 내려받습니다.
+- 상세 화면에서 출처와 확인일을 읽고, 이전 목록으로 돌아갈 때 검색 조건을 유지합니다.
 - 자료를 추가하고, 기존 자료를 수정하고, 확인 화면을 거쳐 삭제합니다.
-- 새 데이터베이스에서 4개 분류, 3개 검증 수준, 12개 자료로 시작합니다.
+- 새 데이터베이스에 자료 12건, 분류 4개, 활용 유형 3개, 검증 수준 3개를 생성합니다.
 
 ## 로컬 실행
 
@@ -38,7 +39,7 @@ flask --app app run
 | `OPENDB_HOSTED` | `1` |
 | `GUNICORN_CMD_ARGS` | `--access-logfile -` |
 
-Gunicorn에서 미리 로드 옵션을 제외해 libSQL 원격 연결을 워커 프로세스에서 초기화합니다. 앱이 시작할 때 `db/schema.sql`과 `db/seed.sql`을 적용합니다. 앱 테이블 존재 여부를 확인하고 초기 스키마와 샘플을 한 트랜잭션에서 생성합니다. 재시작 시 기존 데이터가 유지됩니다. `/healthz`가 HTTP 200과 `"database":"turso"`를 반환하면 앱이 Turso로 연결된 상태입니다. 두 DB 변수를 모두 생략해 Render에서 실행한 경우 SQLite 데이터는 인스턴스 교체 시 초기화될 수 있습니다.
+Gunicorn에서 미리 로드 옵션을 제외해 libSQL 원격 연결을 워커 프로세스에서 초기화합니다. 빈 DB에는 `db/schema.sql`과 `db/seed.sql`을 적용합니다. 이어서 `db/migrations/002_resource_types.sql`에서 활용 유형 테이블과 외래키를 추가합니다. 기존 DB에는 이 변경만 적용하며 자료 ID와 기존 입력값은 유지합니다. 기본 샘플의 출처 URL로 활용 유형을 배정하고 그 외 자료는 미지정으로 둡니다. 이 작업은 트랜잭션으로 한 번만 실행됩니다. `/healthz`가 HTTP 200과 `"database":"turso"`를 반환하면 앱이 Turso로 연결된 상태입니다. 두 DB 변수를 모두 생략해 Render에서 실행한 경우 SQLite 데이터는 인스턴스 교체 시 초기화될 수 있습니다.
 
 ## 데이터베이스 설계
 
@@ -46,11 +47,16 @@ Gunicorn에서 미리 로드 옵션을 제외해 libSQL 원격 연결을 워커 
 erDiagram
     categories ||--o{ resources : classifies
     verification_levels ||--o{ resources : rates
+    resource_types o|--o{ resources : describes
     categories {
       integer id PK
       text name UK
     }
     verification_levels {
+      integer id PK
+      text name UK
+    }
+    resource_types {
       integer id PK
       text name UK
     }
@@ -61,20 +67,21 @@ erDiagram
       text description
       integer category_id FK
       integer verification_id FK
+      integer usage_type_id FK
       text checked_on
       text updated_at
     }
 ```
 
-자료는 분류 하나와 검증 수준 하나에 속합니다. 참조 중인 분류 또는 검증 수준 삭제는 DB에서 제한합니다. 각 칼럼은 원자값을 저장하고, 단일 열 PK를 사용하며, 분류명과 검증 수준명은 각각의 참조 테이블에만 저장합니다. 이 설계에서 채택한 업무 규칙을 기준으로 3NF를 충족합니다. 동일 URL은 하나의 자료로 관리합니다.
+자료마다 분류와 검증 수준은 필수이며 활용 유형은 선택입니다. 분류는 자료의 주제를 기록하고, 활용 유형은 프로젝트에서의 역할을 기록합니다. 유형은 대체 서비스, 개발 부품, 참고 자료 중 하나를 선택할 수 있습니다. 참조 중인 부모 행의 삭제는 DB에서 제한합니다.
 
-자료 목록 조회는 두 참조 테이블을 `JOIN`하고 검색어 및 필터를 바인딩합니다. 쓰기는 `INSERT`, `UPDATE`, `DELETE`와 `RETURNING id`를 사용합니다. 삭제 확인 폼은 POST로 처리합니다.
+각 칼럼은 원자값을 저장하고 후보키는 단일 열입니다. 분류명, 검증 수준명, 활용 유형명은 각각의 참조 테이블에 저장하여 자료 행에서의 이행 종속을 제거했습니다. 동일한 출처 URL은 하나의 자료로 관리합니다.
 
-## Antigravity 2.0 검토 재현
+목록과 CSV는 동일한 검색 조건과 정렬을 사용합니다. 목록 조회는 필수 참조 테이블을 `JOIN`하고, 유형이 미지정인 자료도 읽도록 `resource_types`를 `LEFT JOIN`합니다. 쓰기는 `INSERT`, `UPDATE`, `DELETE`와 `RETURNING id`를 사용합니다. 삭제 확인 폼은 POST로 처리합니다.
 
-초기 구현에는 Codex를 사용했습니다. 과제에서 지정한 Antigravity 2.0의 실제 검토 이력을 남기려면, 해당 앱에서 이 저장소를 열고 다음과 같이 요청한 뒤 실행 결과와 적용한 변경 사항을 보고서에 기록합니다.
+## Codex 활용과 검증
 
-> db/schema.sql을 읽고 PK·FK, 1:N, 3NF가 실제 데이터 규칙과 일치하는지 검토해 줘. Flask 앱을 로컬에서 실행하고 이름 검색, 자료 추가, 수정, 삭제 취소와 삭제 확인을 순서대로 재현해 줘. 수정할 문제가 있으면 원인과 변경 diff를 보여 줘. 비밀 값과 클라우드 설정에는 접근하지 마.
+Codex로 스키마와 화면을 구현하고, 로컬 SQLite와 공개 Render 앱에서 CRUD를 검증했습니다. 기존 버전의 DB에 별도 자료를 넣은 상태에서 마이그레이션을 재현해 자료 보존 및 새 외래키 제약을 확인했습니다. 공개 앱에서는 실제 Turso 연결, 조합 검색, 정렬, 필터를 유지한 상세 화면 이동과 CSV 다운로드를 검증했습니다.
 
 ## 참고 자료
 

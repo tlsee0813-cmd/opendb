@@ -31,24 +31,30 @@ def connect():
     return db
 
 
-def schema_exists(db):
+def table_exists(db, name):
     return db.execute(
-        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'resources'"
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (name,)
     ).fetchone() is not None
+
+
+def apply_sql_file(db, filename):
+    sql = (SQL_DIR / filename).read_text(encoding="utf-8")
+    for statement in sql.split(";"):
+        if statement.strip():
+            db.execute(statement)
 
 
 def init_db():
     db = connect()
     try:
-        if schema_exists(db):
+        if table_exists(db, "resource_types"):
             return
         db.execute("BEGIN IMMEDIATE")
-        if not schema_exists(db):
-            for filename in ("schema.sql", "seed.sql"):
-                sql = (SQL_DIR / filename).read_text(encoding="utf-8")
-                for statement in sql.split(";"):
-                    if statement.strip():
-                        db.execute(statement)
+        if not table_exists(db, "resources"):
+            apply_sql_file(db, "schema.sql")
+            apply_sql_file(db, "seed.sql")
+        if not table_exists(db, "resource_types"):
+            apply_sql_file(db, "migrations/002_resource_types.sql")
         db.commit()
     except Exception:
         db.rollback()
@@ -78,10 +84,9 @@ def fetch_all(sql, args=()):
 def write(sql, args):
     db = get_db()
     try:
-        cursor = db.execute(sql, tuple(args))
-        result = cursor.fetchone()
+        rows = db.execute(sql, tuple(args)).fetchall()
         db.commit()
-        return result
+        return rows[0] if rows else None
     except Exception:
         db.rollback()
         raise
