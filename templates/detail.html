@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}{{ resource.title }} · OpenDB{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('catalog') }}">← 자료 목록</a>
+<article class="panel" aria-labelledby="detail-title">
+  <div class="detail-heading">
+    <div>
+      <span class="badge status-{{ resource.verification_id }}">{{ resource.verification }}</span>
+      <h1 id="detail-title">{{ resource.title }}</h1>
+    </div>
+    <div class="actions">
+      <a class="button secondary" href="{{ url_for('resource_form', resource_id=resource.id) }}">수정</a>
+      <a class="button danger-outline" href="{{ url_for('remove_resource', resource_id=resource.id) }}">삭제</a>
+    </div>
+  </div>
+  <dl class="detail-grid">
+    <div><dt>분류</dt><dd>{{ resource.category }}</dd></div>
+    <div><dt>확인일</dt><dd>{{ resource.checked_on or '미기록' }}</dd></div>
+    <div class="wide"><dt>출처 URL</dt><dd><a href="{{ resource.url }}" target="_blank" rel="noopener noreferrer">{{ resource.url }} <span aria-label="새 창">↗</span></a></dd></div>
+    <div class="wide"><dt>활용 메모</dt><dd class="memo">{{ resource.description or '등록된 메모가 없습니다.' }}</dd></div>
+    <div class="wide"><dt>마지막 저장</dt><dd>{{ resource.updated_at }} UTC</dd></div>
+  </dl>
+</article>
+{% endblock %}

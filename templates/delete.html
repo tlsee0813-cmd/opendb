@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}자료 삭제 · OpenDB{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('detail', resource_id=resource.id) }}">← 자료 상세</a>
+<section class="panel delete-panel" aria-labelledby="delete-title">
+  <h1 id="delete-title">자료를 삭제할까요?</h1>
+  <p><strong>{{ resource.title }}</strong> 항목을 삭제합니다. 삭제한 자료는 복구할 수 없습니다.</p>
+  <form method="post" class="actions form-actions">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <a class="button secondary" href="{{ url_for('detail', resource_id=resource.id) }}">취소</a>
+    <button class="button danger" type="submit">자료 삭제</button>
+  </form>
+</section>
+{% endblock %}

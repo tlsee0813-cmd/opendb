@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#19291f">
+  <title>{% block title %}OpenDB{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="{{ url_for('catalog') }}" aria-label="OpenDB 자료 카탈로그">
+        <span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        OpenDB
+      </a>
+      <nav aria-label="주 메뉴">
+        <a class="nav-link{% if request.endpoint in ('catalog', 'detail') %} active{% endif %}" href="{{ url_for('catalog') }}">자료 목록</a>
+        <a class="button primary small" href="{{ url_for('resource_form') }}"><span aria-hidden="true">＋</span> 자료 추가</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap main">
+    {% for message in get_flashed_messages() %}
+      <p class="flash" role="status">{{ message }}</p>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="wrap footer">
+    <span>OpenDB · 데이터베이스 응용 프로젝트</span>
+    <span>{{ '임시 시연 데이터 · ' if temporary else '' }}{{ backend }}</span>
+  </footer>
+</body>
+</html>
