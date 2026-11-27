@@ -13,7 +13,7 @@ from flask import (
     Flask, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for,
 )
 
-from database import close_db, fetch_all, init_db, write
+from database import CURATED_CATALOG, close_db, fetch_all, init_db, write
 
 PAGE_SIZE = 10
 REVIEW_PAGE_SIZE = 8
@@ -307,6 +307,15 @@ def create_app(test_config=None):
         return render_template("review_board.html", counts=counts, pending=pending, latest=latest,
                                levels=levels, total=total, page=page, last_page=last_page,
                                record_types=RECORD_TYPES)
+
+    @app.get("/guide")
+    def guide():
+        guides = CURATED_CATALOG["guides"]
+        urls = [item["url"] for group in guides for item in group["resources"]]
+        placeholders = ",".join("?" for _ in urls)
+        linked = fetch_all(f"SELECT id, url FROM resources WHERE url IN ({placeholders})", urls)
+        resource_ids = {row["url"]: row["id"] for row in linked}
+        return render_template("guide.html", guides=guides, resource_ids=resource_ids)
 
     @app.route("/resources/<int:resource_id>/review/new", methods=["GET", "POST"])
     def review_form(resource_id):

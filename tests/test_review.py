@@ -24,7 +24,7 @@ class ReviewTests(unittest.TestCase):
     def csrf(response):
         return re.search(rb'name="_csrf" value="([^"]+)"', response.data).group(1).decode()
 
-    def test_upgrade_keeps_v2_data_and_applies_examples_once(self):
+    def test_upgrade_preserves_existing_rows_and_imports_catalog_once(self):
         with sqlite3.connect(self.path) as db:
             db.execute("PRAGMA foreign_keys = ON")
             apply_sql_file(db, "schema.sql")
@@ -32,16 +32,25 @@ class ReviewTests(unittest.TestCase):
             apply_sql_file(db, "migrations/002_resource_types.sql")
             db.execute(
                 "INSERT INTO resources (title, url, category_id, verification_id, usage_type_id) "
-                "VALUES ('기존 자료', 'https://example.org/before', 4, 1, 2)"
+                "VALUES ('기존 자료', 'https://www.unicode.org/reports/tr15/', 4, 1, 2)"
             )
             before = db.execute("SELECT * FROM resources ORDER BY id").fetchall()
 
-        self.create_client()
+        client = self.create_client()
+        self.assertIn("SQLite FTS5 전문 검색", client.get("/guide").text)
         self.create_client()
         with sqlite3.connect(self.path) as db:
-            self.assertEqual(db.execute("SELECT * FROM resources ORDER BY id").fetchall(), before)
-            self.assertEqual(db.execute("SELECT COUNT(*) FROM review_records").fetchone(), (8,))
+            after = db.execute("SELECT * FROM resources ORDER BY id").fetchall()
+            self.assertEqual(after[:len(before)], before)
+            self.assertEqual(len(after) - len(before), 15)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM review_records").fetchone(), (31,))
             self.assertEqual(db.execute("PRAGMA foreign_key_check").fetchall(), [])
+            db.execute("PRAGMA foreign_keys = ON")
+            db.execute("DELETE FROM resources WHERE title = 'SQLite FTS5 전문 검색'")
+
+        client = self.create_client()
+        self.assertIn('href="https://www.sqlite.org/fts5.html"', client.get("/guide").text)
+        self.assertIn("검색 결과가 없습니다.", client.get("/?q=FTS5+전문+검색").text)
 
     def test_records_can_be_searched_and_questions_can_be_resolved_and_reopened(self):
         client = self.create_client()

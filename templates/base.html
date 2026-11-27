@@ -16,8 +16,9 @@
         OpenDB
       </a>
       <nav aria-label="주 메뉴">
-        <a class="nav-link{% if request.endpoint != 'review_board' %} active{% endif %}" href="{{ url_for('catalog') }}"{% if request.endpoint == 'catalog' %} aria-current="page"{% endif %}>자료 목록</a>
+        <a class="nav-link{% if request.endpoint not in ('review_board', 'guide') %} active{% endif %}" href="{{ url_for('catalog') }}"{% if request.endpoint == 'catalog' %} aria-current="page"{% endif %}>자료 목록</a>
         <a class="nav-link{% if request.endpoint == 'review_board' %} active{% endif %}" href="{{ url_for('review_board') }}"{% if request.endpoint == 'review_board' %} aria-current="page"{% endif %}>검토 보드</a>
+        <a class="nav-link{% if request.endpoint == 'guide' %} active{% endif %}" href="{{ url_for('guide') }}"{% if request.endpoint == 'guide' %} aria-current="page"{% endif %}>활용 가이드</a>
         <a class="button primary small" href="{{ url_for('resource_form') }}"><span aria-hidden="true">＋</span> 자료 추가</a>
       </nav>
     </div>

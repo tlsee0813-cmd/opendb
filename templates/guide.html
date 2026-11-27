@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}자료 활용 가이드 · OpenDB{% endblock %}
+{% block content %}
+<section class="guide-intro" aria-labelledby="guide-title">
+  <h1 id="guide-title">자료 활용 가이드</h1>
+  <p>OpenDB 같은 DB 과제를 만들면서 생기는 문제별로, 원문과 바로 해볼 수 있는 실습을 모았습니다.</p>
+</section>
+<div class="guide-grid">
+  {% for group in guides %}
+  <section class="board-card guide-card" aria-labelledby="guide-{{ loop.index }}">
+    <h2 id="guide-{{ loop.index }}">{{ group.title }}</h2>
+    <p class="guide-intro-copy">{{ group.intro }}</p>
+    <ul class="guide-items">
+      {% for item in group.resources %}
+      <li>
+        {% if item.url in resource_ids %}
+          <a href="{{ url_for('detail', resource_id=resource_ids[item.url]) }}">{{ item.title }} <span aria-hidden="true">→</span></a>
+        {% else %}
+          <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.title }} <span aria-hidden="true">↗</span></a>
+        {% endif %}
+        <p>{{ item.description }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="guide-task"><strong>직접 해보기</strong><p>{{ group.task }}</p></div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

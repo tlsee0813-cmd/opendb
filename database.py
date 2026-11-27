@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 from pathlib import Path
@@ -5,6 +6,8 @@ from pathlib import Path
 from flask import current_app, g
 
 SQL_DIR = Path(__file__).with_name("db")
+CURATED_CATALOG = json.loads((SQL_DIR / "curated_catalog.json").read_text(encoding="utf-8"))
+CURATED_INDEX = "resources_by_updated"
 
 
 def connect():
@@ -31,9 +34,9 @@ def connect():
     return db
 
 
-def table_exists(db, name):
+def schema_has(db, name, kind="table"):
     return db.execute(
-        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (name,)
+        "SELECT 1 FROM sqlite_master WHERE type = ? AND name = ?", (kind, name)
     ).fetchone() is not None
 
 
@@ -44,19 +47,49 @@ def apply_sql_file(db, filename):
             db.execute(statement)
 
 
+def import_curated_catalog(db):
+    checked_on = CURATED_CATALOG["checked_on"]
+    for guide in CURATED_CATALOG["guides"]:
+        for resource in guide["resources"]:
+            inserted = db.execute(
+                "INSERT INTO resources (title, url, description, category_id, usage_type_id, "
+                "verification_id, checked_on) VALUES (?, ?, ?, ?, ?, 2, ?) "
+                "ON CONFLICT(url) DO NOTHING RETURNING id",
+                (resource["title"], resource["url"], resource["description"], resource["category"],
+                 resource["usage"], checked_on),
+            ).fetchall()
+            if not inserted:
+                continue
+            resource_id = inserted[0][0]
+            for kind in ("evidence", "limitation", "question"):
+                if kind not in resource:
+                    continue
+                db.execute(
+                    "INSERT INTO review_records (resource_id, kind, summary, application, source_url, "
+                    "source_location, recorded_on) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (resource_id, kind, resource[kind], resource["application"] if kind == "evidence" else None,
+                     resource["url"] if kind != "question" else None,
+                     resource["location"] if kind != "question" else None, checked_on),
+                )
+    db.execute("CREATE INDEX resources_by_updated ON resources(updated_at DESC, id DESC)")
+
+
 def init_db():
     db = connect()
     try:
-        if table_exists(db, "review_records"):
+        if schema_has(db, CURATED_INDEX, "index"):
             return
         db.execute("BEGIN IMMEDIATE")
-        if not table_exists(db, "resources"):
+        if not schema_has(db, "resources"):
             apply_sql_file(db, "schema.sql")
             apply_sql_file(db, "seed.sql")
-        if not table_exists(db, "resource_types"):
+        if not schema_has(db, "resource_types"):
             apply_sql_file(db, "migrations/002_resource_types.sql")
-        if not table_exists(db, "review_records"):
+        if not schema_has(db, "review_records"):
             apply_sql_file(db, "migrations/003_review_records.sql")
+        # Create the listing index only after the catalog is imported in the same transaction.
+        if not schema_has(db, CURATED_INDEX, "index"):
+            import_curated_catalog(db)
         db.commit()
     except Exception:
         db.rollback()
