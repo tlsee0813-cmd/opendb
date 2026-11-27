@@ -31,19 +31,24 @@ def connect():
     return db
 
 
+def schema_exists(db):
+    return db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'resources'"
+    ).fetchone() is not None
+
+
 def init_db():
     db = connect()
     try:
-        if db.execute("PRAGMA user_version").fetchone()[0] > 0:
+        if schema_exists(db):
             return
         db.execute("BEGIN IMMEDIATE")
-        if db.execute("PRAGMA user_version").fetchone()[0] == 0:
+        if not schema_exists(db):
             for filename in ("schema.sql", "seed.sql"):
                 sql = (SQL_DIR / filename).read_text(encoding="utf-8")
                 for statement in sql.split(";"):
                     if statement.strip():
                         db.execute(statement)
-            db.execute("PRAGMA user_version = 1")
         db.commit()
     except Exception:
         db.rollback()
