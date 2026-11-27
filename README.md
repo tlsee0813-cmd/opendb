@@ -36,8 +36,9 @@ flask --app app run
 | `TURSO_AUTH_TOKEN` | 해당 DB의 읽기·쓰기 토큰 |
 | `FLASK_SECRET_KEY` | 세션 서명용 임의 값. 로컬에서 `python -c "import secrets; print(secrets.token_hex(32))"`로 생성 |
 | `OPENDB_HOSTED` | `1` |
+| `GUNICORN_CMD_ARGS` | `--access-logfile -` |
 
-앱이 시작할 때 `db/schema.sql`과 `db/seed.sql`을 적용합니다. 앱 테이블 존재 여부를 확인하고 초기 스키마와 샘플을 한 트랜잭션에서 생성합니다. 재시작 시 기존 데이터가 유지됩니다. `/healthz`가 HTTP 200과 `"database":"turso"`를 반환하면 앱이 Turso로 연결된 상태입니다. 두 DB 변수를 모두 생략해 Render에서 실행한 경우 SQLite 데이터는 인스턴스 교체 시 초기화될 수 있습니다.
+Gunicorn에서 미리 로드 옵션을 제외해 libSQL 원격 연결을 워커 프로세스에서 초기화합니다. 앱이 시작할 때 `db/schema.sql`과 `db/seed.sql`을 적용합니다. 앱 테이블 존재 여부를 확인하고 초기 스키마와 샘플을 한 트랜잭션에서 생성합니다. 재시작 시 기존 데이터가 유지됩니다. `/healthz`가 HTTP 200과 `"database":"turso"`를 반환하면 앱이 Turso로 연결된 상태입니다. 두 DB 변수를 모두 생략해 Render에서 실행한 경우 SQLite 데이터는 인스턴스 교체 시 초기화될 수 있습니다.
 
 ## 데이터베이스 설계
 
